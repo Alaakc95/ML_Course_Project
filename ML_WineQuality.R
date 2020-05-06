@@ -40,6 +40,17 @@ AllWineData <- rbind(redWine, whiteWine)
 
 ##Understanding the data##
 
+### splitting the data into training and test data ###
+n <- 6497
+data <- AllWineData
+
+ind <- sample(c(TRUE, FALSE), n, replace=TRUE, prob=c(0.7, 0.3))
+datatraining <- data[ind, ]
+datatest <- data[!ind, ]
+#ind = sort(sample(nrow(data), nrow(data)*.7))
+#trainingData <- data[ind,]
+#testData <- data[-ind,]
+
 #red Wine
 str(redWine)
 summary(redWine)
@@ -100,7 +111,7 @@ MRD_plot <- plot(MDoutliers$rd, pch="o", cex=1, main="Potential MRD outliers\n b
 abline(h = MDoutliers$cutoff, col="red")  # add cutoff line
 
 
-#treating Outliers
+#treating Outliers (o stands for outlier)
 oFixedAcidity = which(AllWineData$fixed.acidity %in% boxplot.stats(AllWineData$fixed.acidity)$out)
 oVolatiteAcidity = which(AllWineData$volatile.acidity %in% boxplot.stats(AllWineData$volatile.acidity)$out)
 oCitricAcid = which(AllWineData$citric.acid %in% boxplot.stats(AllWineData$citric.acid)$out)
