@@ -83,14 +83,15 @@ trc <- trainControl (method="repeatedcv", number=10, repeats=10)
 model.10x10CV <- train (taste ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + 
                           chlorides + free.sulfur.dioxide + total.sulfur.dioxide + density + pH +
                           sulphates + alcohol, data = train, 
-                        method='nnet', maxit = 500, trace = FALSE,
+                        method='nnet', maxit = 1000, trace = FALSE,
                         tuneGrid = expand.grid(.size=30,.decay=0.01), trControl=trc)
 model.10x10CV$bestTune
 model.10x10CV$results
 #Another way to train the model
-# learned.nnet  <- nnet(taste ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + 
-#                         chlorides + free.sulfur.dioxide + total.sulfur.dioxide + density + pH +
-#                         sulphates + alcohol, wine[learn,], size=0, maxit=1000, trace=F)
+learned.nnet  <- nnet(taste ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + 
+                         chlorides + free.sulfur.dioxide + total.sulfur.dioxide + density + pH +
+                         sulphates + alcohol, data = train, size=30, maxit=1000, trace=F)
+plot(learned.nnet, nid=F)
 #Prediction
 prediction.nnet  <- predict(model.10x10CV, newdata = test, type="raw")
 #Results
