@@ -1,5 +1,5 @@
 rm(list=ls())
-library(FactoMineR)
+library(FactoMineR
 library(factoextra)
 
 #Read the data
@@ -18,6 +18,9 @@ AllWineData$taste <- as.factor(AllWineData$taste)
 
 #Visualization
 fviz_pca_ind(pca, geom = "point", col.ind = AllWineData$taste)
+  
+#PCA
+pca <-PCA(AllWineData, quali.sup = 13, quanti.sup = 12, scale = T) #Shouldn't type and quality be supplementary?
 
 #HCPC clustering
 AllWineData.hcpc <- HCPC(pca, nb.clust=-1, consol=T)
