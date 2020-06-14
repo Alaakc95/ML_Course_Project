@@ -1,5 +1,5 @@
 rm(list=ls())
-library(FactoMineR
+library(FactoMineR)
 library(factoextra)
 
 #Read the data
