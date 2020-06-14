@@ -92,13 +92,16 @@ learned.nnet  <- nnet(taste ~ fixed.acidity + volatile.acidity + citric.acid + r
                          sulphates + alcohol, data = train, size=30, maxit=1000, trace=F)
 plot(learned.nnet, nid=F)
 #Prediction
-prediction.nnet  <- predict(model.10x10CV, newdata = test, type="raw")
-prediction.nnet <- predict(learned.nnet, newdata = test, type="raw")
+prediction.nnet <- predict(learned.nnet, newdata = test, type="class")
 #Results
 p2 <- as.factor(prediction.nnet)
-t2 <- table(pred=p2, truth = test$taste)
+t2 <- table(pred=prediction.nnet, truth = test$taste)
 (error_rate.test <- 100*(1-sum(diag(t2))/sum(t2)))
 (accuracy <- sum(diag(t2)) / sum(t2))
+#Precision
+(precision <- diag(t2) / rowSums(t2))
+#Recall
+(recall <- (diag(t2) / colSums(t2)))
 plot(prediction.nnet)
 
 ## MULTINOMIAL LOGISTIC REGRESSION
