@@ -5,7 +5,7 @@ library(gridExtra)
 library(nnet)
 library(mlr)
 library(aod)
-
+library(e1071) #SVM
 
 AllWineData <- read.table("AllWineDataPreProcessed.csv", header=TRUE, sep=";")
 names(AllWineData)
@@ -52,7 +52,6 @@ title("Estimate error rate")
 grid.table(rf.results[,1:2])
 
 #Model
-
 model <- randomForest(taste ~ . - quality, data=train, ntree=ntrees.best,proximity=TRUE, importance=TRUE,
                       keep.forest=TRUE)
 varImpPlot(model, main = "Importance of variables")
@@ -76,11 +75,11 @@ round(100*(1-sum(diag(result))/sum(result)),2)
 (accuracy <- sum(diag(result)) / sum(result))
 
 ##NEURAL NETWORK
-trc <- trainControl (method="repeatedcv", number=10, repeats=10)
+trc <- trainControl(method="repeatedcv", number=10, repeats=10)
 #Find best size Neural
 (sizes <- seq(10,30,by=10))
 (decays <- 10^seq(-2, 0, by=0.2))
-model.10x10CV <- train (taste ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + 
+model.10x10CV <- train(taste ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + 
                           chlorides + free.sulfur.dioxide + total.sulfur.dioxide + density + pH +
                           sulphates + alcohol, data = train, 
                         method='nnet', maxit = 1000, trace = FALSE,
@@ -94,6 +93,7 @@ learned.nnet  <- nnet(taste ~ fixed.acidity + volatile.acidity + citric.acid + r
 plot(learned.nnet, nid=F)
 #Prediction
 prediction.nnet  <- predict(model.10x10CV, newdata = test, type="raw")
+prediction.nnet <- predict(learned.nnet, newdata = test, type="raw")
 #Results
 p2 <- as.factor(prediction.nnet)
 t2 <- table(pred=p2, truth = test$taste)
@@ -123,11 +123,85 @@ t_mln <- (table(table = pred_mln, truth =test$taste))
 (accuracy <- round(100*(sum(diag(t_mln)) / sum(t_mln)),2))
 
 
+## Support Vector Machines ## (Not working probably needs to be removed)
+train.svm.kCV <- function (which.kernel, myC, myG, kCV=10)
+{
+  for (i in 1:kCV) 
+  {  
+    train <- AllWineData[folds!=i,] # for building the model (training)
+    valid <- AllWineData[folds==i,] # for prediction (validation)
+    
+    x_train <- train[,1:11]
+    t_train <- train[,13]
+    
+    switch(which.kernel,
+           linear={model <- svm(x_train, t_train, type="C-classification", 
+                                cost=myC, gamma=myG, kernel="linear", scale = FALSE)},
+           poly.2={model <- svm(x_train, t_train, type="C-classification", 
+                                cost=myC, gamma=myG, kernel="polynomial", degree=2, coef0=1, scale = FALSE)},
+           poly.3={model <- svm(x_train, t_train, type="C-classification", 
+                                cost=myC, gamma=myG, kernel="polynomial", degree=3, coef0=1, scale = FALSE)},
+           RBF={model <- svm(x_train, t_train, type="C-classification", 
+                             cost=myC, gamma=myG, kernel="radial", scale = FALSE)},
+           stop("Enter one of 'linear', 'poly.2', 'poly.3', 'radial'"))
+    
+    x_valid <- valid[,1:11]
+    pred <- predict(model,x_valid)
+    t_true <- valid[,13]
+    
+    # compute validation error for part 'i'
+    valid.error[i] <- sum(pred != t_true)/length(t_true)
+  }
+  
+  # return average validation error in percentage
+  100*sum(valid.error)/length(valid.error)
+}
 
+k <- 10 
+folds <- sample(rep(1:k, length=N), N, replace=FALSE) 
+valid.error <- rep(0,k)
 
+C <- 1
+for (C in 10^seq(-2,3)) {
+  print("C:")
+  print(C)
+  # Fit an SVM with linear kernel
+  (VA.error.linear <- train.svm.kCV("linear", myC=C))
+  print("linear")
+  print(VA.error.linear)
+  ## Fit an SVM with quadratic kernel 
+  (VA.error.poly.2 <- train.svm.kCV("poly.2", myC=C))
+  print("poly.2")
+  print(VA.error.poly.2)
+  ## Fit an SVM with cubic kernel
+  (VA.error.poly.3 <- train.svm.kCV("poly.3", myC=C))
+  print("poly.3")
+  print(VA.error.poly.3)
+  ## and finally an RBF Gaussian kernel 
+  (VA.error.RBF <- train.svm.kCV ("RBF", myC=C))
+  print("RBF")
+  print(VA.error.RBF)
+}
+for (g in 2^seq(-3,4)) {
+  print("g:")
+  print(g)
+  ## Fit an SVM with quadratic kernel 
+  (VA.error.poly.2 <- train.svm.kCV("poly.2", myC=0.1, myG=g))
+  print("poly.2")
+  print(VA.error.poly.2)
+}
 
+model <- svm(taste ~ fixed.acidity + volatile.acidity + citric.acid + residual.sugar + 
+               chlorides + free.sulfur.dioxide + total.sulfur.dioxide + density + pH +
+               sulphates + alcohol, train, type="C-classification", cost=0.1, gamma=0.125, kernel="polynomial", degree=2, coef0=1, scale = FALSE)
 
+prediction <- predict(model, newdata = test)
 
-
-
-
+result <- table(prediction, test$taste)
+round(100*(1-sum(diag(result))/sum(result)),2)
+#Precision
+(precision <- diag(result) / rowSums(result))
+#Recall
+(recall <- (diag(result) / colSums(result)))
+#accuracy
+(accuracy <- sum(diag(result)) / sum(result))
